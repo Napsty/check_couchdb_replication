@@ -54,7 +54,7 @@ Options:
 *-H is mandatory for all ways of running the script
 **-r is mandatory to check a defined replication (doc_id)
 
-Requirements: curl, jshon"
+Requirements: curl, jshon, tr"
 exit $STATE_UNKNOWN;
 }
 
