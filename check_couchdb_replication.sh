@@ -42,7 +42,7 @@ Usage: ./check_couchdb_replication.sh -H MyCouchDBHost [-P port] [-S] [-u user] 
 
 Options:
 
-   * -H Hostname or ip address of ElasticSearch Node
+   * -H Hostname or ip address of CouchDB Host (or Cluster IP)
      -P Port (defaults to 5984)
      -S Use https
      -u Username if authentication is required
