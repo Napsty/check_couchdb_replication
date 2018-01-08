@@ -24,6 +24,7 @@
 # History:                                                                     #
 # 20180105: Created plugin                                                     #
 # 20180108: Added -d detection                                                 #
+# 20180108: Handle connection problems properly                                #
 ################################################################################
 #Variables and defaults
 STATE_OK=0              # define the exit code if status is OK
@@ -105,7 +106,11 @@ if [[ ${detect} -eq 1 ]]; then
   if [[ -n $(echo $cdbresp | grep -i unauthorized) ]]; then
     echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
     exit $STATE_CRITICAL
+  elif [[ -z $cdbresp ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - Unable to connect to CouchDB on ${protocol}://${host}:${port}"
+    exit $STATE_CRITICAL
   fi
+
   replist=$(echo $cdbresp | jshon -a -e "doc_id" | tr '\n' ' ')
   if [[ -n $replist ]]; then
     echo "COUCHDB AVAILABLE REPLICATIONS: $replist"
@@ -128,6 +133,9 @@ if [[ -n $(echo $cdbresp | grep -i unauthorized) ]]; then
   exit $STATE_CRITICAL
 elif [[ -n $(echo $cdbresp | grep -i missing) ]]; then
   echo "COUCHDB REPLICATION CRITICAL - Replication for $repid not found"
+  exit $STATE_CRITICAL
+elif [[ -z $cdbresp ]]; then
+  echo "COUCHDB REPLICATION CRITICAL - Unable to connect to CouchDB on ${protocol}://${host}:${port}"
   exit $STATE_CRITICAL
 fi
 
