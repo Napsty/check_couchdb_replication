@@ -27,6 +27,8 @@
 # 20180108: Handle connection problems properly                                #
 # 20180326: Input sanitation (either -d or -r are required)                    #
 # 20180326: Avoid confusion about wrong credentials (issue 4)                  #
+# 20180326: Add possibility to check all replications at once (-r ALL)         #
+# 20180326: Handle authentication error "You are not a server admin."          #
 ################################################################################
 #Variables and defaults
 STATE_OK=0              # define the exit code if status is OK
@@ -70,7 +72,7 @@ fi
 }
 ################################################################################
 # Check requirements
-for cmd in curl jshon tr; do
+for cmd in curl jshon tr awk; do
  if ! `which ${cmd} 1>/dev/null`; then
    echo "UNKNOWN: ${cmd} does not exist, please check if command exists and PATH is correct"
    exit ${STATE_UNKNOWN}
@@ -110,6 +112,9 @@ if [[ ${detect} -eq 1 ]]; then
   if [[ -n $(echo $cdbresp | grep -i "Name or password is incorrect") ]]; then
     echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
     exit $STATE_CRITICAL
+  elif [[ -n $(echo $cdbresp | grep -i "You are not a server admin") ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - You are not a server admin"
+    exit $STATE_CRITICAL
   elif [[ -z $cdbresp ]]; then
     echo "COUCHDB REPLICATION CRITICAL - Unable to connect to CouchDB on ${protocol}://${host}:${port}"
     exit $STATE_CRITICAL
@@ -125,30 +130,66 @@ if [[ ${detect} -eq 1 ]]; then
   fi
 fi
 
-# Do the replication check
-if [[ -n $user && -n $pass ]]
-  then authlogic; cdburl="${protocol}://${user}:${pass}@${host}:${port}/_scheduler/docs/_replicator/${repid}"
-  else cdburl="${protocol}://${host}:${port}/_scheduler/docs/_replicator/${repid}"
-fi
-cdbresp=$(curl -k -s $cdburl)
+# Do the replication check for all replications
+if [[ "${repid}" == "ALL" ]]
+then 
+  if [[ -n $user && -n $pass ]]
+    then authlogic; cdburl="${protocol}://${user}:${pass}@${host}:${port}/_scheduler/docs/_replicator"
+    else cdburl="${protocol}://${host}:${port}/_scheduler/docs/_replicator"
+  fi
+  cdbresp=$(curl -k -s $cdburl)
 
-if [[ -n $(echo $cdbresp | grep -i "Name or password is incorrect") ]]; then
-  echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
-  exit $STATE_CRITICAL
-elif [[ -n $(echo $cdbresp | grep -i missing) ]]; then
-  echo "COUCHDB REPLICATION CRITICAL - Replication for $repid not found"
-  exit $STATE_CRITICAL
-elif [[ -z $cdbresp ]]; then
-  echo "COUCHDB REPLICATION CRITICAL - Unable to connect to CouchDB on ${protocol}://${host}:${port}"
-  exit $STATE_CRITICAL
-fi
+  if [[ -n $(echo $cdbresp | grep -i "Name or password is incorrect") ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
+    exit $STATE_CRITICAL
+  elif [[ -n $(echo $cdbresp | grep -i "You are not a server admin") ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - You are not a server admin"
+    exit $STATE_CRITICAL
+  fi
 
-repstatus=$(echo $cdbresp | jshon -e state)
+  # Count failed replications
+  failedrepls=$(echo "$cdbresp"| grep database | grep -v '"state":"running"')
+  failedcount=$(echo "$failedrepls" | wc -l)
 
-if [[ "$repstatus" == '"running"' ]]; then
-  echo "COUCHDB REPLICATION OK - Replication $repid is $repstatus"
-  exit $STATE_OK
-else 
-  echo "COUCHDB REPLICATION CRITICAL - Replication $repid is $repstatus"
-  exit $STATE_CRITICAL
+  if [[ ${failedcount} -gt 0 ]]
+  then 
+    failedinfo=$(echo "$failedrepls" | awk -F',' '{print $2" "$7" "$8}' | tr "\n" ",")
+    #echo "COUCHDB REPLICATION CRITICAL - ${failedcount} replications not running" $cdbresp"| grep database | grep -v '"state":"running"' | awk -F',' '{print $2" "$7" "$8}' | tr "\n" ","
+    echo "COUCHDB REPLICATION CRITICAL - ${failedcount} replications not running ($failedinfo)" 
+    exit $STATE_CRITICAL
+  else 
+    echo "COUCHDB REPLICATION OK - All replications running"; exit $STATE_OK
+  fi
+
+else
+  # Do the replication check for a single replication
+  if [[ -n $user && -n $pass ]]
+    then authlogic; cdburl="${protocol}://${user}:${pass}@${host}:${port}/_scheduler/docs/_replicator/${repid}"
+    else cdburl="${protocol}://${host}:${port}/_scheduler/docs/_replicator/${repid}"
+  fi
+  cdbresp=$(curl -k -s $cdburl)
+  
+  if [[ -n $(echo $cdbresp | grep -i "Name or password is incorrect") ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
+    exit $STATE_CRITICAL
+  elif [[ -n $(echo $cdbresp | grep -i "You are not a server admin") ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - You are not a server admin"
+    exit $STATE_CRITICAL
+  elif [[ -n $(echo $cdbresp | grep -i missing) ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - Replication for $repid not found"
+    exit $STATE_CRITICAL
+  elif [[ -z $cdbresp ]]; then
+    echo "COUCHDB REPLICATION CRITICAL - Unable to connect to CouchDB on ${protocol}://${host}:${port}"
+    exit $STATE_CRITICAL
+  fi
+  
+  repstatus=$(echo $cdbresp | jshon -e state)
+  
+  if [[ "$repstatus" == '"running"' ]]; then
+    echo "COUCHDB REPLICATION OK - Replication $repid is $repstatus"
+    exit $STATE_OK
+  else 
+    echo "COUCHDB REPLICATION CRITICAL - Replication $repid is $repstatus"
+    exit $STATE_CRITICAL
+  fi
 fi
