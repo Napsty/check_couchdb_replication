@@ -151,7 +151,7 @@ then
   failedrepls=$(echo "$cdbresp"| grep database | grep -v '"state":"running"')
   failedcount=$(echo "$failedrepls" | wc -l)
 
-  if [[ ${failedcount} -gt 0 ]]
+  if [[ ${failedcount} -gt 0 ]] && [[ ${failedrepls} =~ "database" ]]
   then 
     failedinfo=$(echo "$failedrepls" | awk -F',' '{print $2" "$7" "$8}' | tr "\n" ",")
     #echo "COUCHDB REPLICATION CRITICAL - ${failedcount} replications not running" $cdbresp"| grep database | grep -v '"state":"running"' | awk -F',' '{print $2" "$7" "$8}' | tr "\n" ","
