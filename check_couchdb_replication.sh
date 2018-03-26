@@ -26,6 +26,7 @@
 # 20180108: Added -d detection                                                 #
 # 20180108: Handle connection problems properly                                #
 # 20180326: Input sanitation (either -d or -r are required)                    #
+# 20180326: Avoid confusion about wrong credentials (issue 4)                  #
 ################################################################################
 #Variables and defaults
 STATE_OK=0              # define the exit code if status is OK
@@ -106,7 +107,7 @@ if [[ ${detect} -eq 1 ]]; then
   fi
   cdbresp=$(curl -k -s $cdburl)
 
-  if [[ -n $(echo $cdbresp | grep -i unauthorized) ]]; then
+  if [[ -n $(echo $cdbresp | grep -i "Name or password is incorrect") ]]; then
     echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
     exit $STATE_CRITICAL
   elif [[ -z $cdbresp ]]; then
@@ -131,7 +132,7 @@ if [[ -n $user && -n $pass ]]
 fi
 cdbresp=$(curl -k -s $cdburl)
 
-if [[ -n $(echo $cdbresp | grep -i unauthorized) ]]; then
+if [[ -n $(echo $cdbresp | grep -i "Name or password is incorrect") ]]; then
   echo "COUCHDB REPLICATION CRITICAL - Unable to authenticate user $user"
   exit $STATE_CRITICAL
 elif [[ -n $(echo $cdbresp | grep -i missing) ]]; then
