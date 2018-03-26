@@ -25,6 +25,7 @@
 # 20180105: Created plugin                                                     #
 # 20180108: Added -d detection                                                 #
 # 20180108: Handle connection problems properly                                #
+# 20180326: Input sanitation (either -d or -r are required)                    #
 ################################################################################
 #Variables and defaults
 STATE_OK=0              # define the exit code if status is OK
@@ -39,7 +40,7 @@ protocol=http
 help () {
 echo -e "$0  (c) 2018-$(date +%Y) Claudio Kuenzler (published under GPL licence)
 
-Usage: ./check_couchdb_replication.sh -H MyCouchDBHost [-P port] [-S] [-u user] [-p pass] [-r replication] [-d]
+Usage: ./check_couchdb_replication.sh -H MyCouchDBHost [-P port] [-S] [-u user] [-p pass] (-r replication|-d)
 
 Options:
 
@@ -49,11 +50,12 @@ Options:
      -u Username if authentication is required
      -p Password if authentication is required
   ** -r Replication ID to monitor (doc_id)
-     -d Dynamically detect and list all available replications
+  ** -d Dynamically detect and list all available replications
      -h Help!
 
 *-H is mandatory for all ways of running the script
-**-r is mandatory to check a defined replication (doc_id)
+**-r is mandatory to check a defined replication (doc_id) 
+**-d is mandatory if no replication check (-r) is set
 
 Requirements: curl, jshon, tr"
 exit $STATE_UNKNOWN;
@@ -94,6 +96,7 @@ done
 
 # Check for mandatory opts
 if [ -z ${host} ]; then help; exit $STATE_UNKNOWN; fi
+if [ -z ${detect} ] && [ -z ${repid} ]; then help; exit $STATE_UNKNOWN; fi
 ################################################################################
 # If -d (detection) is used, present list of replications
 if [[ ${detect} -eq 1 ]]; then
