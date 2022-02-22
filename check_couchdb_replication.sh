@@ -22,7 +22,6 @@
 # 02110-1301, USA.                                                             #
 #                                                                              #
 # (c) 2018, 2022 Claudio Kuenzler                                              #
-# (c) 2021 Guillaume Subiron                                                   #
 #                                                                              #
 # History:                                                                     #
 # 20180105: Created plugin                                                     #
@@ -32,7 +31,6 @@
 # 20180326: Avoid confusion about wrong credentials (issue 4)                  #
 # 20180326: Add possibility to check all replications at once (-r ALL)         #
 # 20180326: Handle authentication error "You are not a server admin."          #
-# 20220221: Compatibility with CouchDB 3 (PR #6 from April 2021)               #
 # 20220221: Replace jshon with jq                                              #
 # 20220221: Improve output of detected replications                            #
 # 20220222: Handle "One Time" replications, add -i parameter (issue #5)        #
