@@ -21,6 +21,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA                #
 # 02110-1301, USA.                                                             #
 #                                                                              #
+# (c) 2018, 2022 Claudio Kuenzler                                              #
+# (c) 2021 Guillaume Subiron                                                   #
+#                                                                              #
 # History:                                                                     #
 # 20180105: Created plugin                                                     #
 # 20180108: Added -d detection                                                 #
@@ -29,6 +32,9 @@
 # 20180326: Avoid confusion about wrong credentials (issue 4)                  #
 # 20180326: Add possibility to check all replications at once (-r ALL)         #
 # 20180326: Handle authentication error "You are not a server admin."          #
+# 20220221: Compatibility with CouchDB 3 (PR #6 from April 2021)               #
+# 20220221: Replace jshon with jq                                              #
+# 20220221: Improve output of detected replications                            #
 ################################################################################
 #Variables and defaults
 STATE_OK=0              # define the exit code if status is OK
@@ -60,7 +66,7 @@ Options:
 **-r is mandatory to check a defined replication (doc_id) 
 **-d is mandatory if no replication check (-r) is set
 
-Requirements: curl, jshon, tr"
+Requirements: curl, jq, tr"
 exit $STATE_UNKNOWN;
 }
 
@@ -72,7 +78,7 @@ fi
 }
 ################################################################################
 # Check requirements
-for cmd in curl jshon tr awk; do
+for cmd in curl jq tr awk; do
  if ! `which ${cmd} 1>/dev/null`; then
    echo "UNKNOWN: ${cmd} does not exist, please check if command exists and PATH is correct"
    exit ${STATE_UNKNOWN}
@@ -120,8 +126,9 @@ if [[ ${detect} -eq 1 ]]; then
     exit $STATE_CRITICAL
   fi
 
-  replist=$(echo $cdbresp | jshon -a -e "doc_id" | tr '\n' ' ')
+  replist=$(echo $cdbresp | jq -r '.[] | {doc_id, source} | join (" ")' | while read docid source; do echo "${docid} (${source})"; done | tr "\n" " ")
   if [[ -n $replist ]]; then
+    
     echo "COUCHDB AVAILABLE REPLICATIONS: $replist"
     exit $STATE_OK
   else
@@ -183,7 +190,7 @@ else
     exit $STATE_CRITICAL
   fi
   
-  repstatus=$(echo $cdbresp | jshon -e state)
+  repstatus=$(echo $cdbresp | jq -r '.state')
   
   if [[ "$repstatus" == '"running"' ]]; then
     echo "COUCHDB REPLICATION OK - Replication $repid is $repstatus"
