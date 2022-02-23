@@ -35,6 +35,7 @@
 # 20220221: Improve output of detected replications                            #
 # 20220222: Handle "One Time" replications, add -i parameter (issue #5)        #
 # 20220222: Improve all HTTP requests with a dedicated function                #
+# 20220223: Add (basic) performance data when checking ALL replications        #
 ################################################################################
 #Variables and defaults
 STATE_OK=0              # define the exit code if status is OK
@@ -180,10 +181,10 @@ if [[ "${repid}" == "ALL" ]]; then
   fi
 
   if [[ ${#failedrepls[*]} -gt 0 ]]; then
-    echo "COUCHDB REPLICATION CRITICAL: ${#failedrepls[*]} continuous replications not running - Details: ${failedinfo[*]}"
+    echo "COUCHDB REPLICATION CRITICAL: ${#failedrepls[*]} continuous replications not running - Details: ${failedinfo[*]} | replok=${#successrepls[*]};;;; replfail=${#failedrepls[*]};;;;"
     exit $STATE_CRITICAL
   else
-    echo "COUCHDB REPLICATION OK - All ${#successrepls[*]} continuous replications running"; exit $STATE_OK
+    echo "COUCHDB REPLICATION OK - All ${#successrepls[*]} continuous replications running | replok=${#successrepls[*]};;;; replfail=${#failedrepls[*]};;;;"; exit $STATE_OK
   fi
 
 else
