@@ -65,7 +65,7 @@ Options:
      -h Help!
 
 *-H is mandatory for all ways of running the script
-**-r is mandatory to check a defined replication (doc_id) 
+**-r is mandatory to check a defined replication (doc_id or ALL)
 **-d is mandatory if no replication check (-r) is set
 
 Requirements: curl, jq, tr"
